@@ -1,0 +1,218 @@
+
+`timescale 1ns / 1ps
+module rng(input clk,input rst_n,input decay_pulse,output reg [33:0]rand_bit_o=0,
+output reg [2:0] sync=0,
+output reg count_enable=0,
+output wire pulse_rise,
+output reg signed [33:0] diff=0,
+output reg [33:0] counter=0,
+output reg capture_delta1=0,
+output reg capture_delta2=0,
+output reg calc_enable=0,
+output reg rand_enable=0,
+output reg counter_reset=0,
+output reg[33:0] delta1=0,
+output reg[33:0] delta2=0,
+
+
+
+output reg [2:0] ps=0,
+output reg [2:0] ns=0
+);
+always @(posedge clk) begin //clk and input asynchronus signal synchronised
+if (!rst_n) begin 
+sync<=3'd0; 
+end else begin 
+sync[0] <= decay_pulse; 
+sync[1] <= sync[0]; 
+sync[2] <= sync[1]; 
+end 
+end 
+
+
+reg sync2_d;
+
+always @(posedge clk)
+begin
+    sync2_d <= sync[2];
+end
+
+assign pulse_rise = sync[2] & ~sync2_d;
+
+
+
+always @(posedge clk)
+begin
+    if(!rst_n || counter_reset)
+    begin
+      counter<=0;
+    end
+    else if(count_enable)
+    begin
+        counter<=counter+1;
+ 
+        end
+    end
+
+
+always @(posedge clk)
+begin
+    if(!rst_n)
+    begin
+       delta1<=0;
+    end
+    else if(capture_delta1)
+    begin
+        delta1<=counter;
+    end
+end
+
+
+always @(posedge clk)
+begin
+    if(!rst_n)
+    begin
+       delta2<=0;
+    end
+    else if(capture_delta2)
+    begin
+        delta2<=counter;
+    end
+end
+
+
+
+
+always @(posedge clk)
+begin
+    if(!rst_n)
+       diff<=0;
+   else if(calc_enable)
+    begin
+       diff <=delta1-delta2;
+        
+    end
+end
+
+always@(posedge clk)
+begin
+   if(!rst_n)
+       rand_bit_o<=0;
+   else if(rand_enable)
+   begin
+     rand_bit_o<=diff;
+    end
+end
+parameter s0=4'd0;
+parameter s1=4'd1;
+parameter s2=4'd2;
+parameter s3=4'd3;
+parameter s4=4'd4;
+parameter s5=4'd5;
+parameter s6=4'd6;
+parameter s7=4'd7;
+
+
+
+always@(posedge clk)
+begin
+   if(!rst_n)
+       ps<=0;
+   else
+      ps<=ns;
+
+end
+
+always@(*)
+begin
+   case(ps)
+       s0: begin 
+           if(pulse_rise)
+             ns=s1;
+           else
+             ns=s0;
+           end
+       s1: 
+       begin      
+           if(pulse_rise)
+              ns=s2;
+           else
+              ns=s1;
+       
+          end
+          
+       s2: begin 
+           ns=s3;
+           end
+       s3:begin
+           if(pulse_rise)
+            ns=s4;
+           else 
+            ns=s3;
+          end
+      s4: begin
+           if(pulse_rise)
+              ns=s5;
+           else
+             ns=s4;
+          end
+       s5: ns=s6;
+       s6: ns=s7;
+       s7: ns=s0;
+      
+    default:ns=s0;
+    
+   endcase
+   end
+   
+   always@(*)
+   begin
+   
+    count_enable   = 0;
+    capture_delta1 = 0;
+    capture_delta2 = 0;
+    counter_reset  = 0;
+    calc_enable    = 0;
+    rand_enable    = 0;
+
+    case(ps)
+    s0:begin 
+      
+       end
+       
+     s1: count_enable=1;
+     
+     s2: begin
+         count_enable=0;
+        capture_delta1 = 1;
+        counter_reset=1;
+        end
+     s3:
+        begin
+   
+
+end
+      
+     s4:count_enable=1;
+      s5:begin 
+      count_enable=0;
+        capture_delta2 = 1;
+        counter_reset=1;
+        end
+     s6:begin
+        
+         calc_enable=1;
+        
+        end
+     s7:begin
+        rand_enable=1;
+        end
+    
+        
+
+     default: begin
+              
+            end
+endcase
+end
+endmodule
