@@ -1,0 +1,94 @@
+
+`timescale 1ns/1ps
+module rng(input clk,input rst_n,input start,input stop,output reg[31:0] counter,output reg[31:0] delta,output reg done,
+output reg counter_reset,
+output reg count_enable,
+output reg delta_enable);
+
+parameter s0=2'd0;
+parameter s1=2'd1;
+parameter s2=2'd2;
+parameter s3=2'd3;
+
+reg [1:0]  ps;
+reg [1:0]  ns;
+
+always@(posedge clk)
+begin
+if(!rst_n || counter_reset)
+     counter<=0;
+  else if(count_enable)
+     counter<=counter+1;
+end
+
+always @(posedge clk)
+begin
+    if(!rst_n)
+        delta<= 0;
+    else if(delta_enable)
+        delta<= counter;
+end
+
+
+
+always@(posedge clk)
+begin
+    if(!rst_n)
+       ps<=s0;
+     else
+       ps<=ns;
+end
+
+always@(*)
+begin
+   case(ps)
+      s0:begin
+          if(start)
+            ns=s1;
+          else
+            ns=s0;
+         end
+       
+      s1:begin
+         if(stop)
+          ns=s2;
+         else
+           ns=s1;
+         end
+      s2: ns=s3;
+      s3: ns=s0;
+      default:ns=s0;
+  endcase
+end
+
+always @(posedge clk)
+begin
+    if(!rst_n)
+        done <= 0;
+    else
+        done <= (ps == s3);
+end
+
+always@(*)
+begin
+     count_enable=0;
+     delta_enable=0;
+     counter_reset=0;
+   
+    case(ps)
+    s0:begin
+       end
+    s1:count_enable=1;
+    s2:begin
+       count_enable=0;
+       delta_enable=1;
+       end
+    s3:begin
+      counter_reset=1;
+     
+      end
+    default:begin
+            end
+            endcase
+end
+endmodule
